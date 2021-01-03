@@ -1,16 +1,38 @@
 import os
 import torch
-from torch import nn
 import xml.etree.ElementTree as ET
 import cv2
 from typing import Tuple
+from torch.utils.data import Dataset
+import albumentations as A
 
 HEAD_DATASET = ""
 
 
-class Dataset(nn.Module):
-    def __init__(self, filepath: str, transformer=None):
-        super().__init__()
+class Transformer():
+    def __init__(self):
+        self.image_transformations = self._create_image_transformations()
+        self.label_transformations = self._create_label_transformations()
+
+    def transform(self, image: np.ndarray, label: np.ndarray):
+        transformed_image_result = self.image_transformations(image=image)
+        transformed_label_result = self.label_transformations(image=label)
+        return transformed_image_result['image'], transformed_label_result['image']
+
+    def _create_image_transformations(self):
+        return A.Compose(
+            [
+                A.Resize(width=256, height=256),
+                A.ToFloat(max_value=255, always_apply=True)
+            ]
+        )
+
+    def _create_label_transformations(self):
+        return A.Resize(width=256, height=256)
+
+
+class Dataset(Dataset):
+    def __init__(self, filepath: str, transformer = None):
         self.transformer = transformer
         tree = ET.parse(filepath)
         root = tree.getroot()
@@ -35,7 +57,10 @@ class Dataset(nn.Module):
         if self.transformer != None:
             image, label = self.transformer.transform(image, label)
 
-        image = torch.from_numpy(image)
-        label = torch.from_numpy(label)
+        image = torch.from_numpy(image).permute(2, 0, 1)
+        label = torch.from_numpy(label).permute(2, 0, 1)
 
         return image, label
+
+    def __len__(self):
+        return len(self.image_paths)
