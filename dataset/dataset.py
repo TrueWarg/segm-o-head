@@ -32,7 +32,7 @@ class Transformer():
 
 
 class Dataset(Dataset):
-    def __init__(self, filepath: str, transformer = None):
+    def __init__(self, filepath: str, transformer=None):
         self.transformer = transformer
         tree = ET.parse(filepath)
         root = tree.getroot()
